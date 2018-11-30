@@ -1,0 +1,23 @@
+Add Computer to Active Directory
+===================================================
+sudo apt install realmd sssd sssd-tools adcli krb5-user packagekit samba-common samba-common-bin samba-libs resolvconf
+___________________________________________________________________________________
+nano /etc/pam.d/common-session
+# add to the end if need (create home directory automatically at initial login)
+
+session optional        pam_mkhomedir.so skel=/etc/skel umask=077
+___________________________________________________________________________________
+
+realm discover <enter domain>
+realm join <enter domain> 
+
+___________________________________________________________________________________
+If you'd like to omit domain name of AD user, configure like follows.
+nano /etc/sssd/sssd.conf
+# line 16: change
+
+use_fully_qualified_names = False
+
+
+systemctl restart sssd
+id Administrator 
