@@ -1,3 +1,0 @@
-==RANDOM NUMBERS==
-shuf -n 1000000 /usr/share/dict/words --random-source=/dev/urandom
-shuf -en 1 {1..100000} --random-source=/dev/urandom
