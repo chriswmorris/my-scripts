@@ -9,3 +9,11 @@ date +%s
 ==RANDOM NUMBERS==
 shuf -n 1000000 /usr/share/dict/words --random-source=/dev/urandom
 shuf -en 1 {1..100000} --random-source=/dev/urandom
+
+
+==Apache2 & SSH log Parsing == 
+access.log.1 parse by IP
+grep "Disconnected from" auth.log | grep -Po "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" | sort | uniq -c > file.txt
+cat access.log | awk '{print $1}' | sort -n | uniq -c | sort -nr | head -20
+awk '/sshd.*invalid user/ { print $9 }' 
+cat users.log | sort > sorted.txt
