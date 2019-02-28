@@ -2,3 +2,6 @@
 ==Unix Time==
 date +%s
 
+
+==Regex Duplicate Lines==
+^(.*)(\r?\n\1)+$
