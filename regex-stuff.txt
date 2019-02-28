@@ -1,4 +1,0 @@
-
-==Duplicate Lines==
-^(.*)(\r?\n\1)+$
-
