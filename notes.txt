@@ -20,3 +20,6 @@ cat users.log | sort > sorted.txt
 
 ==Mult Tables== (cause why not)
 for i in {1..900}; do for j in $(seq 1 $i); do echo -ne $i x $j = $((i*j))\\t;done;echo;done
+
+==Tunnel VNC over SSH==
+ssh -L 5901:localhost:5901 -N -f -l <username> <ip>
