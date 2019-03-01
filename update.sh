@@ -1,5 +1,4 @@
 #!/bin/bash
-#Run as root
 
 echo "========================="
 echo "Running Update"
