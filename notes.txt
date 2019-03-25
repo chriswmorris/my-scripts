@@ -23,3 +23,16 @@ for i in {1..900}; do for j in $(seq 1 $i); do echo -ne $i x $j = $((i*j))\\t;do
 
 ==Tunnel VNC over SSH==
 ssh -L 5901:localhost:5901 -N -f -l <username> <ip>
+
+==View PID running ==
+strace -e trace=open -p 22254 -s 80 -o output.txt
+
+    -p PID: Attach to the process with the process ID PID and begin tracing.
+    -s SIZE: Specify the maximum string size to print (the default is 32).
+    -o filename: Write the trace output to the file filename rather than to screen (stderr).
+    
+    
+
+== View IPs connecting to you on port 80==    
+    
+netstat -tn 2>/dev/null | grep :80 | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -nr | head
