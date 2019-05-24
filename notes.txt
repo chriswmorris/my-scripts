@@ -36,3 +36,14 @@ strace -e trace=open -p 22254 -s 80 -o output.txt
 == View IPs connecting to you on port 80==    
     
 netstat -tn 2>/dev/null | grep :80 | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -nr | head
+
+== Using multiple windows per ssh sesh ==
+
+screen
+
+Create new window: Control + a + c
+Switch between windows: Control + a + n
+Detatch from screen: Control + a + d
+Reattach: screen -r
+Log session: Control + a + h
+Help: Control + a + ?
