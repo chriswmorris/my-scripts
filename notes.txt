@@ -1,49 +1,168 @@
 
-==Unix Time==
-date +%s
-
-==Regex Duplicate Lines==
-^(.*)(\r?\n\1)+$
+=======================UNIX Permissions=======================
 
 
-==RANDOM NUMBERS==
-shuf -n 1000000 /usr/share/dict/words --random-source=/dev/urandom
-shuf -en 1 {1..100000} --random-source=/dev/urandom
+==List of all permissions==
+http://www.filepermissions.com/file-permissions-index
 
 
-==Apache2 & SSH log Parsing == 
-access.log.1 parse by IP
-grep "Disconnected from" auth.log | grep -Po "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" | sort | uniq -c > file.txt
-cat access.log | awk '{print $1}' | sort -n | uniq -c | sort -nr | head -20
-awk '/sshd.*invalid user/ { print $9 }' 
-cat users.log | sort > sorted.txt
+==Give Access to /var/www==
+sudo chown $USER:www-data -R /var/www
 
-==Mult Tables== (cause why not)
-for i in {1..900}; do for j in $(seq 1 $i); do echo -ne $i x $j = $((i*j))\\t;done;echo;done
 
-==Tunnel VNC over SSH==
-ssh -L 5901:localhost:5901 -N -f -l <username> <ip>
 
-==View PID running ==
+=======================Process Management=======================
+
+==Check CPU usage for a process== 
+ps aux | grep <name>
+htop, top
+ps -e
+
+
+
+==View PID running in another tty or sesh==
 strace -e trace=open -p 22254 -s 80 -o output.txt
-
     -p PID: Attach to the process with the process ID PID and begin tracing.
     -s SIZE: Specify the maximum string size to print (the default is 32).
     -o filename: Write the trace output to the file filename rather than to screen (stderr).
-    
-    
 
+
+
+=======================Networking=======================
+
+==Search for open ports in a machine:==
+    sudo netstat -tulpn
+    for i in {1..65535}; do (echo </dev/tcp/<ip>/$i) &>/dev/null && echo -e "\n[+] Open port at:\t$i" || echo -n ".";done
+   
+   
 == View IPs connecting to you on port 80==    
-    
 netstat -tn 2>/dev/null | grep :80 | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -nr | head
 
+
+==View Rx and Tx==
+cat /sys/class/net/eth0/statistics/rx_packets
+cat /sys/class/net/eth0/statistics/tx_packets
+
+
+=======================HDDs=======================
+
+
+==HD Heath==
+sudo smartctl -a /dev/sda | less 
+
+==Checks for bad blocks in HD ==
+sudo badblocks -v /dev/sda
+
+==Clone a partition of your drive, use==
+dd if=/dev/sda1 of=/dev/sdb1 bs=64K conv=noerror,sync
+
+==View Disk Space==
+df -H
+
+==Shredding==
+shred -v -u -z <filename>
+
+
+=======================Applications=======================
+
+==ClamAV==
+sudo freshclam
+clamscan -r /
+clamscan -r --bell -i /
+
+
+
 == Using multiple windows per ssh sesh ==
-
 screen
+    Create new window: Control + a + c
+    Switch between windows: Control + a + n
+    Detatch from screen: Control + a + d
+    Reattach: screen -r
+    Log session: Control + a + h
+    Help: Control + a + ?
 
-Create new window: Control + a + c
-Switch between windows: Control + a + n
-Detatch from screen: Control + a + d
-Reattach: screen -r
-Log session: Control + a + h
-Help: Control + a + ?
+
+    
+==SFTP==
+sftp -o "IdentityFile=/media/folder/keys/key.pem" ubuntu@www.example.org
+
+
+
+==Tunnel VNC over SSH==
+ssh -L 5901:localhost:5901 -N -f -l localadmin 192.168.0.100
+(if not working use this)
+lsof -ti:5901 | xargs kill -9    
+
+
+=======================Parsing=======================
+
+
+==Apache2 & SSH logs == 
+access.log.1 parse by IP
+grep "Disconnected from" auth.log | grep -Po "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" | sort | uniq -c > file.txt
+cat access.log | awk '{print $1}' | sort -n | uniq -c | sort -nr | head -20
+cat auth.log | awk '/sshd.*invalid user/ { print $9 }' 
+cat users.log | sort > sorted.txt
+
+
+=======================Random Scripts=======================
+
+==MULT TABLES==
+for i in {1..900}; do for j in $(seq 1 $i); do echo -ne $i x $j = $((i*j))\\t;done;echo;done
+
+
+==RANDOM NUMBERS==
+shuf -n 10 /usr/share/dict/words --random-source=/dev/urandom | tr '\n' ' '
+shuf -en 1 {1..100000} --random-source=/dev/urandom
+
+
+
+
+=======================REGEX=======================
+
+==Duplicate Lines==
+^(.*)(\r?\n\1)+$
+
+==IPv4==
+/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
+
+
+==Email==
+/^([a-z0-9_\.-]+)@([\da-z\.-]+)\.([a-z\.]{2,6})$/
+=======================Other=======================
+
+
+==Nord Servers==
+https://nordvpn.com/tutorials/linux/openvpn/
+    
+    
+
+==Unix Time==
+date +%s
+
+    
+== Linux Logs Files ==
+
+- /var/log/messages
+    This log file contains generic system activity logs.
+    It is mainly used to store informational and non-critical system messages.
+    In Debian-based systems,  /var/log/syslog directory serves the same purpose.
+    This is the first log file that the Linux administrators should check if something goes wrong.
+
+- /var/log/auth.log and /var/log/secure
+    All authentication related events in Debian and Ubuntu server are logged here.
+
+- /var/log/boot.log
+    This is the repository of booting related information and messages logged during system startup process.
+    
+
+- /var/log/dmesg
+    Information related to hardware devices and their drivers are logged here.
+    
+- /var/log/kern.log
+    contains information logged by the kernel.
+    
+- /var/log/faillog
+    This file contains information on failed login attempts.
+    
+    
