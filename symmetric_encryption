@@ -1,0 +1,294 @@
+
+
+An Introduction to Cryptography using OpenSSL – Part I
+(03/16/2020)
+
+Are you curious about the secure world of cryptography? Look no further! I would like to write this blog post to show you this awesome side of Information Security. To demonstrate the basic concepts, I will be giving a short and brief look at a well known and trusted cryptography library and toolkit called OpenSSL [1]. At my current job, I use this library just about every day.
+
+First and foremost, what is cryptography? In my mind, it's basically a practice and study of keeping your stuff safe. In the dictionary, to give the best explanation..
+
+"Any of various mathematical techniques for encrypting and decrypting data in order to keep it private when transmitted or stored electronically."[2]
+
+But what is "encrypting" data and what is "decrypting" data? Here is a good definition I found.
+
+"Encryption is the process of using an algorithm to transform information to make it unreadable for unauthorized users" [3]. Decrypting is the opposite, when you turn that transformed gibberish into the original form!
+
+To make things simple, let's say you have a picture. This picture is unencrypted right now. We call this unencrypted picture "plaintext". You can use encryption to turn this beautiful plaintext picture into unreadable gibberish. In proper terms, this "gibberish" is called ciphertext. You can then decrypt the ciphertext to view the picture in its original plaintext format!
+
+
+
+So in short, OpenSSL, this crypto library and toolkit, can help you keep your stuff safe! In this blog post, I will be showing you the basics of crpytography - from encrypting and decrypting data to generating keys!
+
+Disclaimer: Please be careful when encrypting your data, storing your keys, etc. This is a general guidance blog post, I am not to be held responsible for any data loss. For best practices, you should be storing your keys in an Hardware Security Module (HSM) for example. Please refer to this NIST doc [4] for best practices for key management. Also, it is important to note that this blog post was written in March of 2020. Depending on when you're reading this, the methods used could be out of date and unsafe. Maybe, in the near future, RSA will be broken!
+
+For this blog post, I will be using OpenSSL version 1.1.1d (10 Sep 2019). To download OpenSSL, please see this page [5] or this page [6]. If you're using a package manager such as yum, apt or brew, you should be able to search for it and install it that way. Note that for commands in the terminal, I will be using the dollar sign "$".
+
+
+
+-----Symmetric Encryption-----
+To keep the definition simple, symmetric encryption is when you use the same key to encrypt and decrypt data. There are two types of symmetric encryption: stream cipher and block ciphers. We will be going over block ciphers in this blog post.
+
+
+
+Important note: You should not use OpenSSL's command line utility for general purpose encryption. It is actually designed only as a test of the library's internal encryption routines. To do general purpose encryption, I will go over GnuPG (gpg) and Veracrypt which are best. Using OpenSSL to encrypt/decrypt like this is just a great way to show you how crypto works. Also note: generating keys using Openssl's command line is fine (better to use a TRNG in an HSM but I will talk about this later), just encryption and decryption operations can be considered not best practice., just encryption and decryption can be considered not best practice.
+
+Learning about Symmetric Encryption with OpenSSL
+First off, let's generate a 256-bit key. When we generate a 256-bit key called "testkey, we can create it in plaintext like so...
+
+$ openssl rand -out testkey.bin 32
+
+(rand = generates randomness. Also, 32 is in bytes, 8*32=256)
+
+I recommend encrypting this key (called wrapping) with a password or another key. I will go over this later on. I will also go over the "rand" parameter later. But in short, a key is just a piece of information. It it best practice to generate keys truly randomly and contain that sufficient entropy. We are using our computer's CPU to generate randomness in this case, which*technically* is not as good as a true random number generator . It’s still cryptographically secure. But I'll go over that later on.
+
+In short, we generated entropy using our computer's CPU to make the key!
+
+Now that we have the key, how do use it to encrypt? This is where the Symmetric-key Algorithms come into play! These algorithms (also called ciphers) are mathematical functions that work along side with the key to "mix" and "transform" the plaintext data into ciphertext.
+
+Here are some good and approved ciphers to be used for symmetric encryption.
+
+-AES (Rijndael)
+-Blowfish
+-Serpent
+-Chacha20
+
+AES, or Advanced Encryption Standard is the most used, as it has passed many tests by government and scientific organizations. We will be talking about AES in this blog post. More information about AES can be found here [7].
+
+Lets now use the AES cipher to encrypt with a 256-bit key!
+
+First, lets generate a random Initialization Vector (IV) - I'll talk about this later on.
+
+$ openssl rand -hex 16
+
+The output should be a 16 byte string like so: 021afbb5928ac15fa4503d90959ed139
+
+Note: You will need this IV when encrypting and decrypting (which actually depends on the cipher). You should always use unique IVs every time you encrypt and they should be random.
+
+
+Encrypting with a Symmetric Key
+This command encrypts the file called supersecret.docx using AES-256 in cfb8 mode. It uses the testkey.bin as the key. It also uses the initialization factor and pbkdf2. The output file that contains the ciphertext is called encrypted.
+
+$ openssl enc -aes-256-cfb8 -in supersecret.docx -k file:testkey.bin -out encrypted -pbkdf2 -iv 021afbb5928ac15fa4503d90959ed139
+
+I will now talk a little about this command.
+
+enc
+Tells openssl to encrypt
+
+-aes-256-cfb8
+As you may know, AES is the cipher, but what is cfb8? This is the cipher mode of operation. Not to get to technical, but the mode describes how to repeatedly apply a cipher's single-block operation to securely transform amounts of data larger than a block [8]. In short, the mode defines how the cipher encrypts and decrypts it. You can use another cipher here if you wish. Some other modes for example are CBC, CFB, OFB, and GCM. More information about modes of operation, I recommend taking a look here [9].
+
+-in supersecret.docx
+The plaintext document to be encrypted
+
+-k file:testkey.bin
+Specifies the key file
+
+-out encrypted
+Defines that the output be called encrypted, which is the encrypted plaintext document in ciphertext
+
+-pbkdf2
+This applies a pseudorandom function along with a salt value and repeats the process many times to produce a derived key be used in the operation. Let's just say it reduces vulnerabilities to brute force attacks. [10]
+
+-iv
+To hide patterns in encrypted data, you should use an IV, which introduces more randomness to the operation. Like I noted before, you should always use unique IVs every time you encrypt and they should be random. The IV should be in hexadecimal format in this case. You should remember this value as you will use it to encrypt and decrypt. More about IVs can be found here [11].
+
+
+In addition, let's say you don't want to use a key file and want to use a password instead to encrypt/decrypt. You can use this command. It will prompt you for a password. The password will act as the key in this case.
+
+$ openssl enc -aes-256-cfb8 -in supersecret.docx -out encrypted -pbkdf2 -iv 021afbb5928ac15fa4503d90959ed139
+
+Decrypting with a Symmetric Key
+To decrypt the file with the key, you can use this command...
+
+$ openssl enc -d -aes-256-cfb8 -in encrypted -k file:testkey.bin -out supersecret-decrypted.docx -pbkdf2 -iv 021afbb5928ac15fa4503d90959ed139
+
+The command is very similar to the above, but it uses the "-d" parameter to decrypt and the "-in" parameter defines the ciphertext and the "-out" defines where the decrypted plaintext should be called. Note that you should use the same key and IV. You can decrypt only with the same parameters you defined when encrypting.
+
+If your symmetric key is a password - here is how to decrypt the file...
+
+$ openssl enc -d -aes-256-cfb8 -in encrypted -out supersecret-decrypted.docx -pbkdf2 -iv 021afbb5928ac15fa4503d90959ed139
+
+In conclusion, using the OpenSSL command line for symmetric encryption is a great way to learn to about it. However, for general purpose encryption, I recommenced using GnuPG. Here is a brief overview of GPG for symmetric encryption.
+
+GPG and Veracrypt
+I will be using GnuPG version 2.2.12. To download GnuPG, please see this page [12]. If you're using a package manager such as yum, apt or brew, you should be able to search for it and install it that way by searching for "gpg".
+
+To encrypt a document, you just have to issue this command. It should prompt you for a password. This will be the key to encrypt and decrypt. This encrypt a file called file.docx.
+
+$ gpg --verbose -c file.docx
+
+Make sure that it uses AES256 as the cipher, update the software if it doesn't. It should write the ciphertext to file.docx.gpg
+
+To decrypt...
+
+$ gpg --verbose -d file.docx.gpg > file-decrypted.docx
+
+You cannot use keyfiles with GnuPG as far as I'm aware.
+
+My favorite, and another great tool to use for symmetric encryption is Veracrypt [13]. With Veracrypt, you can encrypt entire hard drives if you wish. You can also just create containers on your hard drive to place your documents to be encrypted. Veracrypt is great if you like GUIs and just want to encrypt/decrypt your stuff. You can use keyfiles or passwords as keys with Veracrypt.
+
+I highly recommend using Veracrypt or GnuPG for your day-to-day symmetric encrypting/decrypting needs. The OpenSSL command line is just a cool way to test and to see how encryption/decryption works. When you get more advanced, you can use crypto libraries such as OpenSSL (we were using its command line, not its library) and Wolfcrypt to do encryption operations. The purpose of the blog is to learn basics, maybe I'll cover the more advanced ways later. Generating keys using Openssl's command line is fine (better to use a TRNG in an HSM but I will talk about this later), just encryption and decryption can be considered not best practice.
+
+
+-----Asymmetric Encryption-----
+You know how with Symmetric encryption, we used the same key to encrypt and decrypt? With Asymmetric encryption, also called Public-key encryption, you create a keypair (so two keys). One key is used to encrypt and the another key is used to decrypt. The encryption key is also called the "Public Key" and the decryption key is also called the "Private Key". Why is this? Well for starters, you can expose and put your Public (encryption) key anywhere. Since this key is used to just encrypt, if an evil person got a hold of it, they would just be able to encrypt with it. The Private key is how you decrypt, so you definitely want to keep this a secret and hidden! You can also not derive a Private Key if you know the Public Key. You can derive a Public key from a Private Key. More information about asymmetric can be found here [14].
+
+Never expose your Private Key!
+
+Here is a good Youtube video on Asymmetric. It can be tricky to understand at first.
+https://www.youtube.com/watch?v=AQDCe585Lnc
+
+
+
+Since we now understand some basics about Asymmetric encryption, what are the ciphers(algorithms) called? For symmetric encryption, we used AES. We cannot use AES for asymmetric encryption. These are some of the asymmetric ciphers.
+
+-RSA
+-EC (Elliptic Curve)
+
+There's a ton of cool math involved with these ciphers. I highly recommend you take a look each of these ciphers! I won't go into the math behind it in this blog post. When it comes asymmetric encryption, the most you can encrypt is based on the size of the key you created. For example, an RSA4096 public key can encrypt more than a RSA2048 public key. If your key size is 2048 bits, you can only encrypt files less than 2048 bits.
+
+Furthermore, asymmetric encryption/decryption operations are very slow.
+
+Now you may ask - "Why do so many people use Asymmetric encryption even though you can only encrypt such as small size of data? It's also so slow encrypt/decrypt!" The answer is that asymmetric encryption is usually used to encrypt a Symmetric key, which is usually 128 or 256 bits large.
+
+Asymmetric Encryption Example
+Lets say a guy named Randy wants to send another guy, Mr. Lahey, his top secret cheeseburger recipe (recipe.docx). The only issue is that they are communicating over their public network. An evil man, Sam Losco, could be intercepting network traffic. They don't want to take the risk.
+
+Here's what they do!
+
+Mr Lahey creates a private and public key.
+
+Since Randy wants to send recipe.docx to Mr Lahey, Mr Lahey sends Randy his public (encryption) key. In its transit on the network, Sam Losco on the other end steals Lahey's public key! However, this is useless, as the public key can only used for encryption.
+
+On Randy’s PC…
+
+1) Randy creates a symmetric key (symkey.bin) and encrypts recipe.docx.
+* The newly encrypted recipe.docx file will be called recipe.docx.enc
+
+2) Randy then encrypts the Symmetric Key with Mr. Lahey's Public Key.
+* The newly encrypted symmetric key is called symkey.bin.enc
+
+Randy now sends the encrypted files (recipe.docx.enc and symkey.bin.enc) to Mr. Lahey. In transit on the network, Sam Losco steals the files! However, they are encrypted and useless, as he doesn’t have the Private (decryption) Key! He trashes the encrypted files and goes back to cooking hot dogs.
+
+Mr.Lahey then decrypts the symmetric key (symkey.bin.enc) with his private key! With the symmetric key, he decrypts recipe.docx.enc to the original recipe.docx! They now both have a shared secret (the symmetric key). They can now talk securely to each other! What I just described to you is *kind* of how HTTPS works!
+
+Creating an Asymmetric Private Key
+In short, both ciphers (RSA and EC) are excellent and not yet broken (as of March 2020). However, elliptic curve keypairs are smaller and just as secure as RSA. Many like EC keypairs as they are a "faster" because of their small size. However, RSA is more widely used as the math is simpler and it came out first [15]. I will be talking mostly about RSA in this blog. RSA is perfectly fine… For now.
+
+Now let's do some examples with OpenSSL! Again, generating keys using Openssl's command line is fine (better to use TRNG but I will talk about this later), just encryption and decryption operations can be considered not best practice with the OpenSSL command line tool. Another thing, we will creating these private keys in the PKCS#8 format to keep things simple [16].
+
+This command creates a private key using RSA and a key size of 2048 bits. You can also use a key size of 4096. The private key in this case is called "privatekey.pem". KEEP THE PRIVATE KEY SAFE!
+
+$ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out privatekey.pem
+
+You can also encrypt (wrap) the private key with a password using AES. Just specify -aes256 like so...
+
+$ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out privatekey.pem -aes256
+
+Here is how you can look at the actual details of the private key. It will show the various prime numbers and exponents that it is using. More information about this can be found here, see the "Example" section [15]. The private key in this case is called "privatekey.pem".
+
+$ openssl pkey -in privatekey.pem -text
+
+Creating an Asymmetric Public Key from the Private Key
+Now that we have the private keys created, we can now complete the keypair by making the public key! Remember, you can derive a public key from a private key but you cannot derive a private key from a public key (what would be the point?)
+
+Here’s the command to create a public key from a private- just make sure to specify the correct private key (privatekey.pem) and specify a different name for the public key like so...
+
+$ openssl pkey -in privatekey.pem -out publickey.pem -pubout
+
+You can then view the details on the Public key with this command.
+
+$ openssl pkey -in publickey.pem -pubin -text
+
+Encrypting and Decrypting with our Asymmetric Keypairs
+Now on to the actual encryption using public keys!
+
+Let's say we want to encrypt a file called test.txt.
+
+Remember: the file in question, in this case, test.txt, must be less than the size of the key. If your key is RSA2048, then test.txt would have to be less than 2048 bits.
+
+This is how to encrypt with our public key called "publickey.pem"
+
+$ openssl rsautl -encrypt -inkey publickey.pem -pubin -in test.txt -out test.txt.enc
+
+The only way you can decrypt this file (test.txt.enc) is with the private key!
+
+Here's how to decrypt test.txt with the RSA private key (privatekey.pem)
+
+$ openssl rsautl -decrypt -inkey privatekey.pem -in test.txt.enc -out test-decrypted.txt
+
+Now that's how you do this in OpenSSL! Remember, for the most part, generating the keys using openssl is fine, and to be honest, encrypting and decrypting is fine. It's just not best practice to encrypt/decrypt with the Openssl command line. GnuPG is another way of using asymmetric encryption. There are cool tutorials out there such as this one [17] and this one [18].
+
+-----Other Operations with OpenSSL-----
+There’s a lot of cool operations you can perform with OpenSSL because encrypting and decrypting. I will list them out here.
+
+As you may remember, I pointed out that with the command to create a 256-bit key, we used our PC’s CPU’s to generate entropy to produce the random numbers that is used as the key. When we are issuing this command, OpenSSL in the back-end is using a pseudorandom number generator (PRNG) [19]. These PRNGs are just algorithms that are technically not random. However, it is still considered cryptograpically secure.
+
+$ openssl rand -out testkey.bin 32
+
+I noted that this way is not technically the best way to produce randomness. The best way is with a True Random Number Generator (TRNG). A true random number generator is a piece of hardware that produces true randomness. More can be found here [20].
+
+Anyways, here are some commands to produce randomness.
+
+Generate 100 bytes of random data and write to a file called file.txt
+
+$ openssl rand -out file.txt 100
+
+Generate 100 bytes of random data in hexadecimal
+
+$ openssl rand -hex 100
+
+Generate 100 bytes of random data in base64.
+
+$ openssl rand -base64 100
+
+If you have an HSM or TRNG, you can specify it to generate true randomness.
+
+$ openssl rand -engine HSMexample 100
+
+Another cool thing OpenSSL can do is generate prime numbers! I talk about this in my older blog post, here [21]. In short, here is the command to generate a random 4096-bit prime number.
+
+$ openssl prime -generate -bits 4096
+
+Lastly, you can use OpenSSL to test and compare cipher speeds on your PC! This is a basically benchmarking test.
+
+This tests all supported ciphers.
+
+$ openssl speed
+
+This tests a single cipher (aes-256-gcm)
+
+$ openssl speed evp aes-256-gcm
+
+In conclusion, I hope that this blog post was a good introduction to cryptography. We used OpenSSL to demonstrate basic concepts such as encryption, decryption and ciphers. Next, in part 2, I will be talking about PKI (Public Key Infrastructure)!
+
+Any questions, concerns? Please contact me – chriswmorris@protonmail.ch
+
+
+
+
+
+
+References
+[1] https://www.openssl.org/
+[2] https://www.ahdictionary.com/word/search.html?q=cryptography+
+[3] https://www.techopedia.com/definition/5507/encryption
+[4] https://nvlpubs.nist.gov/nistpubs/specialpublications/nist.sp.800-57pt1r4.pdf
+[5] https://www.openssl.org/source/
+[6] https://wiki.openssl.org/index.php/Binaries
+[7] https://en.wikipedia.org/wiki/Advanced_Encryption_Standard
+[8] https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation
+[9] https://web.cs.ucdavis.edu/~rogaway/papers/modes.pdf
+[10] https://en.wikipedia.org/wiki/PBKDF2
+[11] https://en.wikipedia.org/wiki/Initialization_vector
+[12] https://www.gnupg.org/download/index.html
+[13] https://www.veracrypt.fr/en/Downloads.html
+[14] https://en.wikipedia.org/wiki/Public-key_cryptography
+[15] https://en.wikipedia.org/wiki/RSA_(cryptosystem)
+[16] https://en.wikipedia.org/wiki/PKCS_8
+[17] https://www.digitalocean.com/community/tutorials/how-to-use-gpg-to-encrypt-and-sign-messages
+[18] https://www.devdungeon.com/content/gpg-tutorial
+[19] https://en.wikipedia.org/wiki/Pseudorandom_number_generator
+[20] https://en.wikipedia.org/wiki/Hardware_random_number_generator
+[21] https://memeoutpost.org/blog/03112020.html
